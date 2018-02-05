@@ -1,8 +1,7 @@
 master: &Master |
   docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
-  echo 'export DOCKER_REPO=jchancehud/circle-artifacts-redirect' >> $BASH_ENV
-  docker build . -t $DOCKER_REPO
-  docker push $DOCKER_REPO
+  docker build . -t jchancehud/circle-artifacts-redirect
+  docker push jchancehud/circle-artifacts-redirect
 
 version: 2
 jobs:
