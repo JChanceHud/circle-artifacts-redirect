@@ -1,0 +1,23 @@
+master: &Master |
+  docker login -u "$DOCKER_USER" -p "$DOCKER_PASSWORD"
+  echo 'export DOCKER_REPO=jchancehud/circle-artifacts-redirect' >> $BASH_ENV
+  docker build . -t $DOCKER_REPO
+  docker push $DOCKER_REPO
+
+version: 2
+jobs:
+  build:
+    machine: true
+    steps:
+      - checkout
+      - run: *Master
+workflows:
+  version: 2
+  build_all:
+    jobs:
+      - build:
+          context: org-global
+          filters:
+            branches:
+              only:
+                - master
