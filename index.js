@@ -24,7 +24,6 @@ http.createServer((req, _res) => {
     res.on('end', () => {
       try {
         const resString = data.join('');
-        console.log(resString);
         if (!resString.length) throw new Error('0 length string received');
         const result = JSON.parse(resString);
         _res.writeHead(301, {
