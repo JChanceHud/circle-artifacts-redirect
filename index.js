@@ -6,7 +6,7 @@ const http = require('http');
 const https = require('https');
 const url = require('url');
 
-http.createServer((req, _res) => {
+http.createServer(async (req, _res) => {
   const path = req.url;
   const queryParams = url.parse(req.url, true).query;
   if (path === '/healthcheck') {
@@ -14,42 +14,72 @@ http.createServer((req, _res) => {
     _res.end();
     return;
   }
-  https.get({
+  if (!queryParams.project) {
+    _res.writeHead(400);
+    _res.end(`No 'project' query parameter supplied`);
+  } else if (!queryParams.token) {
+    _res.writeHead(400);
+    _res.end(`No 'token' query parameter supplied`);
+  }
+  try {
+    const artifactsUrl = await getArtifacts(queryParams.project, queryParams.token, queryParams.filename);
+    _res.writeHead(302, {
+      'Location': artifactsUrl
+    });
+    _res.end();
+  } catch (err) {
+    _res.writeHead(500);
+    _res.end(`Error parsing circleci response: ${err}`);
+  }
+}).listen(3000);
+
+async function getArtifacts(project, token, filename) {
+  const latestBuildNum = await getLatestBuilds(project, token);
+  const result = await getUrl({
     hostname: 'circleci.com',
-    path: `/api/v1.1${path}`,
-    headers: {
-      'Accept': 'application/json'
-    }
-  }, res => {
-    if (res.statusCode !== 200) {
-      _res.writeHead(500);
-      return _res.end(`Non-200 status code received from circleci: ${res.statusCode}`);
-    }
-    res.setEncoding('utf8');
-    const data = [];
-    res.on('data', chunk => data.push(chunk));
-    res.on('end', () => {
-      try {
-        const resString = data.join('');
-        if (!resString.length) throw new Error('0 length string received');
-        const result = JSON.parse(resString);
-        for (var item of result) {
-          if (!queryParams.filename) break;
-          if (item.path.indexOf(queryParams.filename) === -1) continue;
-          _res.writeHead(301, {
-            'Location': item.url
-          });
-          _res.end();
-          return;
-        }
-        _res.writeHead(301, {
-          'Location': result[0].url
-        });
-        _res.end();
-      } catch (e) {
-        _res.writeHead(500);
-        _res.end(`Error parsing circleci response: ${e}`);
+    path: `/api/v1.1/project/github/${project}/${latestBuildNum}/artifacts?circle-token=${token}`
+  });
+  for (var item of result) {
+    if (!filename) break;
+    if (item.path.indexOf(filename) === -1) continue;
+    return Promise.resolve(item.url);
+  }
+  return Promise.resolve(result[0].url);
+}
+
+async function getLatestBuilds(project, token) {
+  const result = await getUrl({
+    hostname: 'circleci.com',
+    path: `/api/v1.1/project/github/${project}?circle-token=${token}`,
+  });
+  if (!result.length) return Promise.resolve(0);
+  return Promise.resolve(result[0].previous_successful_build.build_num);
+}
+
+async function getUrl(options) {
+  return new Promise((resolve, reject) => {
+    https.get({
+      ...options,
+      headers: {
+        'Accept': 'application/json'
       }
+    }, res => {
+      if (res.statusCode !== 200) {
+        return reject(new Error(`Non-200 status code received: ${res.statusCode}, ${res.statusMessage}`));
+      }
+      res.setEncoding('utf8');
+      const data = [];
+      res.on('data', chunk => data.push(chunk));
+      res.on('end', () => {
+        try {
+          const received = data.join('');
+          if (!received.length) throw new Error('0 length response received');
+          const result = JSON.parse(received);
+          resolve(result);
+        } catch (err) {
+          reject(err);
+        }
+      });
     });
   });
-}).listen(3000);
+}
