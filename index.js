@@ -7,6 +7,11 @@ const https = require('https');
 
 http.createServer((req, _res) => {
   const url = req.url;
+  if (url === '/healthcheck') {
+    _res.writeHead(204);
+    _res.end();
+    return;
+  }
   https.get({
     hostname: 'circleci.com',
     path: `/api/v1.1${url}`,
