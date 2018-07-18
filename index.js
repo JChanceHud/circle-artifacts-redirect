@@ -39,6 +39,7 @@ async function getArtifacts(project, token, filename) {
     hostname: 'circleci.com',
     path: `/api/v1.1/project/github/${project}/${latestBuildNum}/artifacts?circle-token=${token}`
   });
+  if (!result.length) throw new Error(`0 length artifacts response received`);
   for (var item of result) {
     if (!filename) break;
     if (item.path.indexOf(filename) === -1) continue;
