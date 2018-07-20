@@ -1,3 +1,6 @@
+docker_login: &DockerLogin |
+  echo $DOCKER_PASSWORD | docker login -u $DOCKER_LOGIN --password-stdin
+
 version: 2
 jobs:
   build:
@@ -6,7 +9,7 @@ jobs:
       - checkout
       - run: npm install
       - run: npm run build
-      - run: echo $DOCKER_PASSOWRD | docker login -u $DOCKER_USER --password-stdin
+      - run: *DockerLogin
       - run: docker build . -t jchancehud/circle-artifacts-redirect
       - run: docker push jchancehud/circle-artifacts-redirect
 workflows:
