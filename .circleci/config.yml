@@ -6,10 +6,9 @@ jobs:
       - checkout
       - run: npm install
       - run: npm run build
-      - run: |
-        echo $DOCKER_PASSOWRD | docker login -u $DOCKER_USER --password-stdin
-        docker build . -t jchancehud/circle-artifacts-redirect
-        docker push jchancehud/circle-artifacts-redirect
+      - run: echo $DOCKER_PASSOWRD | docker login -u $DOCKER_USER --password-stdin
+      - run: docker build . -t jchancehud/circle-artifacts-redirect
+      - run: docker push jchancehud/circle-artifacts-redirect
 workflows:
   version: 2
   build_all:
