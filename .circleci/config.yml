@@ -1,5 +1,5 @@
 docker_login: &DockerLogin |
-  docker login -u $DOCKER_LOGIN -p $DOCKER_PASSWORD
+  echo $DOCKER_PASSWORD | docker login -u $DOCKER_USER --password-stdin
 
 version: 2
 jobs:
