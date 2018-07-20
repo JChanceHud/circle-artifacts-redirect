@@ -3,12 +3,19 @@
 const http = require('http');
 const https = require('https');
 const url = require('url');
-const invariant = require('invariant');
+
+function isObject(obj): %checks {
+  return typeof obj === 'object';
+}
 
 http.createServer((req, _res) => {
   const path = req.url;
   const queryParams = url.parse(req.url, true).query;
-  invariant(queryParams);
+  if (!isObject(queryParams)) {
+    _res.writeHead(400);
+    _res.end(`Bad query parameters received`);
+    return;
+  }
   if (path === '/healthcheck') {
     _res.writeHead(204);
     _res.end();

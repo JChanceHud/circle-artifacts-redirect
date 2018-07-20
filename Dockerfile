@@ -1,6 +1,6 @@
 FROM node:alpine
 MAINTAINER Chance Hudson
 
-COPY ./index.js .
+COPY ./build/index.js .
 
 CMD ["node", "."]

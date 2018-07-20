@@ -20,7 +20,5 @@
     "flow-bin": "^0.76.0",
     "flow-typed": "^2.5.1"
   },
-  "dependencies": {
-    "invariant": "^2.2.4"
-  }
+  "dependencies": {}
 }
