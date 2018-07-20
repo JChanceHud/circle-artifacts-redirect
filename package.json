@@ -3,10 +3,24 @@
   "version": "0.0.1",
   "description": "A redirect service for advanced circleci badges",
   "main": "index.js",
-  "scripts": {},
+  "scripts": {
+    "postinstall": "flow-typed install",
+    "build": "babel -d build src",
+    "start": "npm run build && node build"
+  },
   "bin": {
     "circle-artifacts-redirect": "index.js"
   },
   "author": "Chance Hudson",
-  "license": "MIT"
+  "license": "MIT",
+  "devDependencies": {
+    "babel-cli": "^6.26.0",
+    "babel-plugin-transform-flow-strip-types": "^6.22.0",
+    "babel-plugin-transform-object-rest-spread": "^6.26.0",
+    "flow-bin": "^0.76.0",
+    "flow-typed": "^2.5.1"
+  },
+  "dependencies": {
+    "invariant": "^2.2.4"
+  }
 }

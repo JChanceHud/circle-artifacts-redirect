@@ -1,14 +1,14 @@
-#!/usr/bin/env node
-
-'use strict';
+// @flow
 
 const http = require('http');
 const https = require('https');
 const url = require('url');
+const invariant = require('invariant');
 
-http.createServer(async (req, _res) => {
+http.createServer((req, _res) => {
   const path = req.url;
   const queryParams = url.parse(req.url, true).query;
+  invariant(queryParams);
   if (path === '/healthcheck') {
     _res.writeHead(204);
     _res.end();
@@ -21,16 +21,17 @@ http.createServer(async (req, _res) => {
     _res.writeHead(400);
     _res.end(`No 'token' query parameter supplied`);
   }
-  try {
-    const artifactsUrl = await getArtifacts(queryParams.project, queryParams.token, queryParams.filename);
-    _res.writeHead(302, {
-      'Location': artifactsUrl
+  getArtifacts(queryParams.project, queryParams.token, queryParams.filename)
+    .then(artifactsUrl => {
+      _res.writeHead(302, {
+        'Location': artifactsUrl
+      });
+      _res.end();
+    })
+    .catch(err => {
+      _res.writeHead(500);
+      _res.end(`Error parsing circleci response: ${err}`);
     });
-    _res.end();
-  } catch (err) {
-    _res.writeHead(500);
-    _res.end(`Error parsing circleci response: ${err}`);
-  }
 }).listen(3000);
 
 async function getArtifacts(project, token, filename) {
