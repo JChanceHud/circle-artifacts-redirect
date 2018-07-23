@@ -8,6 +8,38 @@ function isObject(obj): %checks {
   return typeof obj === 'object';
 }
 
+type BuildStatus = 'success' | 'fixed' | 'failed';
+
+type CircleBuild = {
+  compare: string,
+  previous_successful_build: {
+    build_num: number,
+    status: BuildStatus,
+    build_time_millis: number
+  },
+  build_parameters: {
+    CIRCLE_JOB: string,
+    [key: any]: string
+  },
+  oss: boolean,
+  fail_reason?: any,
+  reponame: string,
+  failed: boolean,
+  branch: string,
+  build_num: number,
+  has_artifacts: boolean,
+  status: BuildStatus,
+  workflows: {
+    job_name: string,
+    job_id: string,
+    workflow_id: string,
+    workspace_id: string,
+    upstream_job_ids: string[],
+    upstream_concurrency_map: any,
+    workflow_name: string
+  }
+};
+
 http.createServer((req, _res) => {
   const path = req.url;
   const queryParams = url.parse(req.url, true).query;
@@ -28,7 +60,12 @@ http.createServer((req, _res) => {
     _res.writeHead(400);
     _res.end(`No 'token' query parameter supplied`);
   }
-  getArtifacts(queryParams.project, queryParams.token, queryParams.filename)
+  getArtifacts(queryParams.project, queryParams.token, {
+    filename: queryParams.filename,
+    branch: queryParams.branch,
+    hasArtifacts: queryParams.hasArtifacts,
+    jobName: queryParams.jobName
+  })
     .then(artifactsUrl => {
       _res.writeHead(302, {
         'Location': artifactsUrl
@@ -41,28 +78,44 @@ http.createServer((req, _res) => {
     });
 }).listen(3000);
 
-async function getArtifacts(project, token, filename) {
-  const latestBuildNum = await getLatestBuilds(project, token);
+async function getArtifacts(project, token, options: {
+  filename?: string,
+  branch?: string,
+  hasArtifacts?: boolean,
+  jobName?: string
+} = {}) {
+  const latestBuildNum = await getLatestBuilds(project, token, options);
   const result = await getUrl({
     hostname: 'circleci.com',
     path: `/api/v1.1/project/github/${project}/${latestBuildNum}/artifacts?circle-token=${token}`
   });
   if (!result.length) throw new Error(`0 length artifacts response received`);
   for (var item of result) {
-    if (!filename) break;
-    if (item.path.indexOf(filename) === -1) continue;
+    if (!options.filename) break;
+    if (item.path.indexOf(options.filename) === -1) continue;
     return Promise.resolve(item.url);
   }
   return Promise.resolve(result[0].url);
 }
 
-async function getLatestBuilds(project, token) {
-  const result = await getUrl({
+async function getLatestBuilds(project, token, options: {
+  branch?: string,
+  hasArtifacts?: boolean,
+  jobName?: string
+} = {}) {
+  const result: CircleBuild[] = await getUrl({
     hostname: 'circleci.com',
     path: `/api/v1.1/project/github/${project}?circle-token=${token}`,
   });
-  if (!result.length) return Promise.resolve(0);
-  return Promise.resolve(result[0].previous_successful_build.build_num);
+  if (!result.length) throw new Error('Empty build list received from circle api');
+  for (var item of result) {
+    if (item.status !== 'success' && item.status !== 'fixed') continue;
+    if (options.branch && item.branch !== options.branch) continue;
+    if (typeof options.hasArtifacts === 'boolean' && options.hasArtifacts !== item.has_artifacts) continue;
+    if (options.jobName && item.workflows && options.jobName !== item.workflows.job_name) continue;
+    return Promise.resolve(item.build_num);
+  }
+  throw new Error('Unable to find build matching parameters');
 }
 
 async function getUrl(options) {
