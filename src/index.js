@@ -8,7 +8,7 @@ function isObject(obj): %checks {
   return typeof obj === 'object';
 }
 
-type BuildStatus = 'success' | 'fixed' | 'failed';
+type BuildStatus = 'success' | 'fixed' | 'failed' | 'running';
 
 type CircleBuild = {
   compare: string,
