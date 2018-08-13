@@ -67,8 +67,14 @@ http.createServer((req, _res) => {
     jobName: queryParams.jobName
   })
     .then(artifactsUrl => {
+      const urlObject = url.parse(artifactsUrl, true);
+      urlObject.query = {
+        ...urlObject.query,
+        'circle-token': queryParams.token
+      };
       _res.writeHead(302, {
-        'Location': artifactsUrl
+        // $FlowFixMe
+        'Location': urlObject.format()
       });
       _res.end();
     })
